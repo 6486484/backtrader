@@ -26,6 +26,9 @@ import collections
 import itertools
 import multiprocessing
 
+# ROR - Rich O'Regan added..
+import copy     # Used to deepcopy a itertools.product class..
+
 import backtrader as bt
 from .utils.py3 import (map, range, zip, with_metaclass, string_types,
                         integer_types)
@@ -287,6 +290,7 @@ class Cerebro(with_metaclass(MetaParams, object)):
         ('broker_coo', True),
         ('quicknotify', False),
     )
+
 
     def __init__(self):
         self._dolive = False
@@ -1120,6 +1124,13 @@ class Cerebro(with_metaclass(MetaParams, object)):
             self.addstrategy(Strategy)
 
         iterstrats = itertools.product(*self.strats)
+
+        # ROR - Rich O'Regan added..
+        # Create a deep copy pf itertools.Product object we can trash.
+        # Else if convert to list, list(iterstrats), it empties the Product
+        # object, meaning we lose the data.
+        iterstratsCOPY = copy.deepcopy(iterstrats)  # Ok to trash copy..
+
         if not self._dooptimize or self.p.maxcpus == 1:
             # If no optimmization is wished ... or 1 core is to be used
             # let's skip process "spawning"
@@ -1127,6 +1138,12 @@ class Cerebro(with_metaclass(MetaParams, object)):
                 runstrat = self.runstrategies(iterstrat)
                 self.runstrats.append(runstrat)
         else:
+            # ROR - Rich O'Regan added..
+            # We are optimising, setup our progress percent counter..
+            totalOptsToRun = len(list(iterstratsCOPY))
+            countOpts = 0
+            _str = '\r%.1f%% completed.   \tRan %d of %d optimisations.\t\t    '
+
             if self.p.optdatas and self._dopreload and self._dorunonce:
                 for data in self.datas:
                     data.reset()
@@ -1139,10 +1156,22 @@ class Cerebro(with_metaclass(MetaParams, object)):
             pool = multiprocessing.Pool(self.p.maxcpus or None)
             for r in pool.imap(self, iterstrats):
                 self.runstrats.append(r)
+
+                # ROR - Rich O'Regan added..
+                # Add a progress percent counter to strategy optimisations
+                # so user can gauge how long optimisation has left to run.
+                countOpts += 1
+                print(_str % (countOpts/totalOptsToRun*100, countOpts,
+                      totalOptsToRun), end='')
+
                 for cb in self.optcbs:
                     cb(r)  # callback receives finished strategy
 
+            # ROR - Rich O'Regan added..
+            # Send cursor to new line because have been printing on same line..
+            print('')
             pool.close()
+
 
             if self.p.optdatas and self._dopreload and self._dorunonce:
                 for data in self.datas:
