@@ -156,7 +156,9 @@ class Trade(object):
         )
 
     def __init__(self, data=None, tradeid=0, historyon=False,
-                 size=0, price=0.0, value=0.0, commission=0.0):
+                 size=0, price=0.0, value=0.0, commission=0.0, R=None):
+                 # ROR - Richard O'Regan added above..
+                 # add param R=None above. Incorporate R-Multiple feature..
 
         self.ref = next(self.refbasis)
         self.data = data
@@ -165,6 +167,7 @@ class Trade(object):
         self.price = price
         self.value = value
         self.commission = commission
+        self.R = R  # ROR - Richard O'Regan added: R-Multiple attribute..
 
         self.pnl = 0.0
         self.pnlcomm = 0.0
@@ -287,6 +290,33 @@ class Trade(object):
         else:  # abs(self.size) < abs(oldsize)
             # position reduced/closed
             pnl = comminfo.profitandloss(-size, self.price, price)
+
+            if self.R != None:
+                # ROR - Richard O'Regan added: R-Multiple feature
+                # NOTE: self.price = inital entry price
+                # NOTE: price = exit price
+                if -size < 0:  # If a sell signal that initiated position..
+                    risk = self.R - self.price
+                else:
+                    risk = self.price - self.R
+                # print('Price = %f,  R = %f,  Risk = %f  ' % (self.price, self.R, risk))
+                try:
+                    pnl = pnl/risk                                  # ROR
+                except ZeroDivisionError:
+                    #_s = ('\n'+'*'*50)*3
+                    #print('DIVISION BY ZERO ERROR   ---using-->   R-Multiple')
+                    #print('** Entry price = ', self.price)
+                    #print('** R Stop = ', self.R)
+                    #print('** Risk = ', risk)
+                    #print(('*'*50+'\n')*3)
+                    #print('** Order = ', order)
+                    #print(('*'*50+'\n')*3)
+                    raise Exception('Division by Zero with R-Multiple.\n' +
+                                    'Entry price =' + str(self.price) + '\n' +
+                                    'R Stop =' + str(self.R) + '\n' +
+                                    'Risk =' + str(self.risk) + '\n' +
+                                    'Order =' + str(order) + '\n')
+
 
             self.pnl += pnl
             self.pnlcomm = self.pnl - self.commission

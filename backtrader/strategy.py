@@ -496,7 +496,10 @@ class Strategy(with_metaclass(MetaStrategy, StrategyBase)):
         datatrades = self._trades[tradedata][order.tradeid]
         if not datatrades:
             trade = Trade(data=tradedata, tradeid=order.tradeid,
-                          historyon=self._tradehistoryon)
+                          historyon=self._tradehistoryon,
+                          # ROR - Richard O'Regan added..
+                          # Incorporate R-Multiple feature..
+                          R=(order.info.R if 'R' in order.info else None))
             datatrades.append(trade)
         else:
             trade = datatrades[-1]
@@ -523,7 +526,10 @@ class Strategy(with_metaclass(MetaStrategy, StrategyBase)):
             if exbit.opened:
                 if trade.isclosed:
                     trade = Trade(data=tradedata, tradeid=order.tradeid,
-                                  historyon=self._tradehistoryon)
+                                  historyon=self._tradehistoryon,
+                                  # ROR - Richard O'Regan added..
+                                  # Incorporate R-Multiple feature..
+                                  R=(order.info.R if 'R' in order.info else None))
                     datatrades.append(trade)
 
                 trade.update(order,
