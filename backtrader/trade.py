@@ -291,32 +291,25 @@ class Trade(object):
             # position reduced/closed
             pnl = comminfo.profitandloss(-size, self.price, price)
 
+            # ROR - Richard O'Regan added: R-Multiple feature
             if self.R != None:
-                # ROR - Richard O'Regan added: R-Multiple feature
                 # NOTE: self.price = inital entry price
                 # NOTE: price = exit price
                 if -size < 0:  # If a sell signal that initiated position..
                     risk = self.R - self.price
                 else:
                     risk = self.price - self.R
-                # print('Price = %f,  R = %f,  Risk = %f  ' % (self.price, self.R, risk))
                 try:
-                    pnl = pnl/risk                                  # ROR
+                    pnl = pnl/risk
                 except ZeroDivisionError:
-                    #_s = ('\n'+'*'*50)*3
-                    #print('DIVISION BY ZERO ERROR   ---using-->   R-Multiple')
-                    #print('** Entry price = ', self.price)
-                    #print('** R Stop = ', self.R)
-                    #print('** Risk = ', risk)
-                    #print(('*'*50+'\n')*3)
-                    #print('** Order = ', order)
-                    #print(('*'*50+'\n')*3)
-                    raise Exception('Division by Zero with R-Multiple.\n' +
+                    # Give output to user to track division by zero bug..
+                    print('Division by Zero with R-Multiple.\n' +
                                     'Entry price =' + str(self.price) + '\n' +
                                     'R Stop =' + str(self.R) + '\n' +
-                                    'Risk =' + str(self.risk) + '\n' +
-                                    'Order =' + str(order) + '\n')
-
+                                    'Risk =' + str(risk) + '\n' +
+                                    '\nTrade =\n' + str(self) + '\n' +
+                                    '\nOrder =\n' + str(order) + '\n')
+                    raise
 
             self.pnl += pnl
             self.pnlcomm = self.pnl - self.commission
