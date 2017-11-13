@@ -1041,6 +1041,7 @@ class Cerebro(with_metaclass(MetaParams, object)):
           - For Optimization: a list of lists which contain instances of the
             Strategy classes added with ``addstrategy``
         '''
+        print('ROR:  MASTER BRANCH')   # ROR added - remove
         self._event_stop = False  # Stop is requested
 
         if not self.datas:
