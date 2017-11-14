@@ -1,5 +1,5 @@
 #######################################
-# Code: Rich O'Regan  (London) Sep 2017
+# Code: Rich O'Regan  (London) Nov 2017
 #######################################
 
 import math
@@ -35,7 +35,7 @@ class TradeRecorder(Analyzer):
         Returns a dictionary holding the list of open and closed trades.
 
 
-    [This 'tradeanalyzer.py' was coded by Richard O'Regan (London) Nov 2017]
+    [This 'traderecorder.py' was coded by Richard O'Regan (London) Nov 2017]
     '''
 
 
@@ -60,7 +60,7 @@ class TradeRecorder(Analyzer):
 
     def stop(self):
         super().stop    # Check if we need this..
-        
+
         # Create our output list of closed and open trades we have tracked..
         for n in self._tradeDict:
             t = self._tradeDict[n]   # Get value (ie Trade object)
