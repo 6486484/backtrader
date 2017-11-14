@@ -315,6 +315,13 @@ class Trade(object):
             self.pnlcomm = self.pnl - self.commission
 
         self.value = comminfo.getvaluesize(self.size, self.price)
+        
+        # ROR - Rich O'Regan added.
+        # Note: bastardisation only works in simple trade cases where each trade
+        # has one entry and one exit (fine for all my purposes)..
+        self.entry_price = self.price    # ROR
+        self.exit_price = price    # ROR
+
 
         # Update the history if needed
         if self.historyon:
