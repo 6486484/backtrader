@@ -259,12 +259,13 @@ class BasicTradeStats(Analyzer):
                                                 / (-1 * oL.pnl.total))
                 oA.stats.winFactor = (oW.trades.closed
                                               / oL.trades.closed)
-                oA.stats.rewardRiskRatio = (oW.pnl.average
+                if oW.pnl.average != 0:   # Check for division by zero
+                    oA.stats.kellyPercent = oA.pnl.average / oW.pnl.average*100
+                if oL.pnl.average != 0:   # Check for division by zero
+                    oA.stats.rewardRiskRatio = (oW.pnl.average
                                            / (-1 * oL.pnl.average))
-                oA.stats.expectancyPercentEstimated = (oA.pnl.average
+                    oA.stats.expectancyPercentEstimated = (oA.pnl.average
                                                / (-1 * oL.pnl.average) * 100)
-                oA.stats.kellyPercent = oA.pnl.average / oW.pnl.average * 100
-
 
     def preparation_pre_calculation(self, trade):
         # This code does the basic steps of sorting each trade into a winner or
