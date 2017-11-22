@@ -63,11 +63,14 @@ class SQN2(Analyzer):
     def start(self):
         super(SQN2, self).start()
         self.pnl = list()
+        self.pnlTRADETEST = list()  # Store whole trade object to test size..
         self.count = 0
 
     def notify_trade(self, trade):
         if trade.status == trade.Closed:
             self.pnl.append(trade.pnlcomm)
+            #self.pnlTRADETEST.append(trade)   # ROR remove just a test storing whole Trade object..
+            ### ACTUALLY CANT DO AS WITH my 3-way data, can't pickle.. leave test - move on..
             self.count += 1
 
     def stop(self):
@@ -83,3 +86,7 @@ class SQN2(Analyzer):
 
         self.rets.sqn = sqn
         self.rets.trades = self.count
+
+
+        # Clear out member attributes used for calculations.. ROR added
+        #self.pnl = None

@@ -339,6 +339,17 @@ class BasicTradeStats(Analyzer):
     def stop(self):
         super().stop    # Check if we need this..         ########
         if not self.p.calcStatsAfterEveryTrade: self.calculate_statistics()
+
+
+        # Delete all lists we created to perform calculations..
+        # (to save memory)
+        self._all_pnl_list=[]    # hidden from user - all trades pnl.
+        self._won_pnl_list=[]    # hidden from user - win trades pnl.
+        self._lost_pnl_list=[]   # hidden from user - lost trades pnl.
+        self._curStreak = None  # Current streak type [None, 'Won', 'Lost']
+        self._wonStreak_list=[]    # Store each won streak in list..
+        self._lostStreak_list=[]    # Store each loss streak in list..
+
         self.rets._close()    # Check if we need this..   £££££££££####
 
 
