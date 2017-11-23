@@ -12,18 +12,55 @@ from backtrader.utils import AutoOrderedDict, AutoDict
 
 class TradeRecorder(Analyzer):
     '''
+
+    GITHUB IT and SAVE. Delete other traderecorders and check init. ***
+
     Summary:
 
-        Keep a track of all trades made in a dictionary (hidden to user).
-        After strategy has ran, generate two lists of Trade objects;
-        1) A list of closed trades and 2) A list of trades still open.
+        TradeRecorder enables user to save all trades produced by strategy and
+        also the corresponding equity curve.
 
-        These can then be accessed by user to e.g. plot trades entry and exit
-        on a chart.
+        NOTE: to record trades, the Trade object needs to be modified because
+        'exit_price' and 'exit_date' do not exist in the public Backtrader
+        version. So you need to use the hacked 'trade.py' modification by
+        Richard O'Regan that includes these extra attributes.
 
-        Allow access of trades after strategy ran via;
-            self.rets.openTrades
-            self.rets.closedTrades
+        [Or you can add them yourself in the Trade.update() code.
+        At very end of the method add;
+
+                self.entry_price = self.price
+                self.exit_price = price
+
+        This code only works for simple trades with one exit and one entry.
+        Assume 1 unit traded, not tested with different trade sizes.]
+
+
+        TRADE RECORDING MODE
+        After strategy has ran, if mode = "trade" or "trade+equity", a DataFrame
+        of open trades and a DataFrame of closed trades can be accessed via;
+
+                self.rets.openTrades
+                self.rets.closedTrades
+
+        The above information can be used to e.g. visulise all trades produced
+        with a strategy by plotting them on top of the market data chart.
+        The trades can be visually checked to ensure the strategy has been coded
+        correctly.
+
+
+        EQUITY RECORDING MODE
+        If mode = "equity" or "trade+equity", a DataFrame representing the
+        equity curve can be accessed via;
+
+            self.rets.equityCurve
+
+        The above information can be used to visulise the equity curve for a
+        strategy and it's particular parameters.
+
+        USE
+        It is advised to set the parameter to record only the data you need.
+        This will save space in memory (and storage if you write to disk).
+
 
     Params:
 
@@ -32,14 +69,14 @@ class TradeRecorder(Analyzer):
            - options are ``trades``, ``equity`` or ``trades+equity``
 
             If ``trades`` option, record all data related to trade enough to
-            be able to plot on a chart the exact entry and exit date and price.
+            be able to plot on a chart the exact entry & exit date and price.
 
             Data recorded:
 
                 'entry_price' from Trade.entry_price
                 'entry_date' from Trade.open_datetime()
-                'exit_price' from Trade.exit_price
-                'exit_date' from Trade.close_datetime()
+                *'exit_price' from Trade.exit_price
+                *'exit_date' from Trade.close_datetime()
                 'pnl' from Trade.pnl
                 'pnlcomm' from Trade.pnlcomm
                 'tradeid' from Trade.tradeid
@@ -63,7 +100,10 @@ class TradeRecorder(Analyzer):
 
       - get_analysis
 
-        Returns a dictionary holding the list of open and closed trades.
+        Returns threes DataFrame, one each for;
+                Open trades     ---> Records trades entries and exits.
+                Closed trades   ---> Records trades entries and exits.
+                Equity curve    ---> Records cumulative pnl.
 
 
     [This 'traderecorder.py' was coded by Richard O'Regan (London) Nov 2017]
@@ -72,28 +112,34 @@ class TradeRecorder(Analyzer):
 
     # Declare parameters user can pass to this Analyzer..
     params = (
-             ('mode', 'trade+equity' ),
+             ('mode', 'trades+equity' ),
              )
 
 
     def create_analysis(self):
-        # Keep dict of trades based on tradeid
+        # Keep dict of trades based on tradeid.
         # Note: must be a unique tradeid defined for each trade else will
-        # get overwritten..
+        # get overwritten.
         self.rets = AutoOrderedDict()
         self.rets.openTrades = []   # List of all open trades..
         self.rets.closedTrades = [] # List of all closed trades..
         self.rets.equityCurve = [] # List of dictonary
 
-        # Hidden from user, destroyed at end, useful to track trades..
+        # Hidden from user, destroyed at end, useful to track trades.
         self._tradeDict = {}    # Temp store Trade objects..
         self._cumulativeEquity = None   # Keep track of our equity..
 
+        # Check user parameters are valid - if not raise Exception.
+        if self.p.mode not in ['trades', 'equity', 'trades+equity']:
+            raise Exception("TradeRecorder Analyzer must have parameter " +
+                "'mode' set to either 'trades', 'equity' or 'trades+equity'." +
+                f"\nInstead you have set it to '{self.p.mode}'.")
+
 
     def notify_trade(self, trade):
-        # Add trade to our trade dict which records all trades..
+        # Add Trade object to our trade dict which records all trades..
         # Great thing is, don't care if open or closed, if an open trade
-        # becomes closed, it is simply rewritten.
+        # becomes closed, it is simply rewritten (because same tradeid/key).
         # Note: must be a unique tradeid for each trade else overwritten.
         self._tradeDict[trade.tradeid]=trade
 
@@ -106,14 +152,9 @@ class TradeRecorder(Analyzer):
 
             # Create DataFrame of essential attributes of Trade object..
             # Note: we dont save Trade objects because they are inefficient and
-            # each Trade saves market data (retarded)..
+            # each Trade object appears to save whole market data (retarded)..
 
             # Common information to store for both open and closed trades..
-
-            ###NEXT:  equity only -> only closed trades date and pnlList
-        ###else:  open and closed trades as per usual
-        ###if Both, add cumulative to Closed (make sure same colum names)
-
             # Set up basic dataframe row used for both open & closed trades.
             # We later append columns to this for closed trades..
             _trade=pd.DataFrame([
@@ -123,15 +164,15 @@ class TradeRecorder(Analyzer):
                 'pnlcomm':trade.pnlcomm,
                 'tradeid':trade.tradeid}])
 
-            if trade.isopen and self.p.mode != 'equity':
-                # Trade open..
+            # Check if trade open or closed..
+            if trade.isopen and self.p.mode in ['trade','trades+equity']:
+                # This trade is still open..
                 # Limited to what data we have because trade not closed out
                 # e.g. no exit date and no equity curve change.
                 self.rets.openTrades.append(_trade)  # Save open trade dict
 
             else:
-                # Trade closed..
-
+                # Trade closed.
                 # Calc & store equity if required..
                 if self.p.mode in ['equity','trades+equity']:
                     _equity = self.calc_equity(trade)
@@ -139,37 +180,27 @@ class TradeRecorder(Analyzer):
 
                 # Calc & store trades if required..
                 if self.p.mode in ['trades','trades+equity']:
-                    _trade['exit_date'] = trade.close_datetime()
-                    _trade['exit_price'] = trade.exit_price
+                    # Need to use the hacked Trade objects that included
+                    # exit price and date..
+                    # If attributes don't exist, raise an error..
+                    try:
+                        _trade['exit_date'] = trade.close_datetime()
+                        _trade['exit_price'] = trade.exit_price
+                    except AttributeError as e:
+                        print(e,'\nThe Trade object received by this ' +
+                            'TradeRecorder Analyzer is missing extra ' +
+                            'attributes\nnot included in the public ' +
+                            'Backtrader version. ' +
+                            'To use this Analyzer, you need to ' +
+                            'hack\n"trade.py" to add in two extra ' +
+                            ' attributes. See Rich O\'Regan for details.')
+                        raise
+
                     self.rets.closedTrades.append(_trade)
 
 
-                #trade=pd.DataFrame([
-
-
-                #_equity=pd.DataFrame([
-                #    {'date':trade.close_datetime(),
-
-
-                #else:
-                    # No R stop..
-                #    _trade=pd.DataFrame([
-                #        {'entry_price':trade.entry_price,
-                #        'entry_date':trade.open_datetime(),
-                #        'exit_price':trade.exit_price,
-                #        'exit_date':trade.close_datetime(),
-                #        'pnl':trade.pnl,
-                #        'pnlcomm':trade.pnlcomm,
-                #        'tradeid':trade.tradeid}])
-
-                #self.rets.closedTrades.append(_trade)  # Save closed trade dict
-
-                # Save equity curve..
-                #self.rets.equityCurve.append({'date':trade.open_datetime(),
-                #                              'equity':trade.pnlcomm()})
-
-        # I append single DataFrame to a list, then concatenate list to one
-        # big DataFrame because more efficient than appending to DF..
+        # Append single DataFrame to a list, then concatenate list to one big
+        # DataFrame because more efficient than lots of appending to DF..
         o=self.rets
         if self.p.mode in ['trades', 'trades+equity']:
             o.closedTrades = (pd.concat(o.closedTrades).reset_index(drop=True)
@@ -177,7 +208,7 @@ class TradeRecorder(Analyzer):
             o.openTrades = (pd.concat(o.openTrades).reset_index(drop=True)
                            if o.openTrades!=[] else None)
         else:
-            o.closedTrades = o.openTrades = None   # Trades not required by user..
+            o.closedTrades = o.openTrades = None    # Trades not required..
 
         if self.p.mode in ['equity', 'trades+equity']:
             o.equityCurve = (pd.concat(o.equityCurve).reset_index(drop=True)
@@ -185,9 +216,10 @@ class TradeRecorder(Analyzer):
         else:
             o.equityCurve = None    # Equity not required by user..
 
-        # Now kill the internal trade dict of Trade objects..
-        # Highly inefficient, we don't want it to be saved with the
-        # BackTrader Cerebro optimisation feature, so set to None.
+        # 'Kill' internal list of Trade objects by setting to 'None'.
+        # Inefficient if kept. We don't want list of bloated Trade objects to be
+        # saved. (BackTrader Cerebro optimisation feature automatically saves
+        # this Analyzer and all attributes).
         self._tradeDict = None
         self.rets._close()    # Check if we need this..
 
@@ -199,19 +231,28 @@ class TradeRecorder(Analyzer):
         # Mostly straight forward, keep a track of the current pnl , which
         # always starts from 0 (NOT interested in account equity e.g. $10,000).
 
-        # Curve must start from zero, which should be start of data, but since
-        # we don't know the start of the market data (though it could be found
-        # with more code), instead for the first value, use the *ENTRY* date of
-        # the first trade and the value 0.
-        # Additional trades closed, output sum new pnl with previous value, and
-        # use the *EXIT* date.
+        # Curve must start from zero, which should be start of data.
+        # We don't know the start of the market data (though it could be found
+        # with more code), so;
+        # The very first value, use the *ENTRY* date of first trade and value 0.
+        # For all other closed trades use the *EXIT* date and the value is found
+        # by adding latest pnl to cumulative equity.
 
-        # NOTE: the first trade identified by _cumulativeEquity = None
+        # OUTPUT:
+        # A DataFrame of a single row returned (or two rows if first trade).
+
+        # IMPLEMENTATION:
+        # The very first trade identified by _cumulativeEquity = None
         # Then two rows are returned;
-        # ROW1: entry_date, 0
-        # ROW2: exit_date, 0 + pnl
+        # i.e.
+        # TRADE1
+        # ROW1: entry_date of TRADE1, 0
+        #  _cumulativeEquity = 0 + pnl of TRADE1
+        # ROW2: exit_date of TRADE1, _cumulativeEquity
 
-        # Output is a DataFrame single row or two rows if first time..
+        # TRADE2
+        # _cumulativeEquity = _cumulativeEquity + pnl of TRADE2
+        # ROW3: exit_date of TRADE2, _cumulativeEquity
 
         if self._cumulativeEquity == None:
             # First time, initialise. Generate two rows..
