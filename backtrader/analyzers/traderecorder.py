@@ -13,8 +13,6 @@ from backtrader.utils import AutoOrderedDict, AutoDict
 class TradeRecorder(Analyzer):
     '''
 
-    GITHUB IT and SAVE. Delete other traderecorders and check init. ***
-
     Summary:
 
         TradeRecorder enables user to save all trades produced by strategy and
