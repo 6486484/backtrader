@@ -45,6 +45,3 @@ from .periodstats import *
 from .kelly import *
 from .basictradestats import *
 from .traderecorder import *
-from .traderecorderTUPLE import *    # REMOVE ROR
-from .traderecorderTUPLEnoRETS import *    # REMOVE ROR
-from .sqn2 import *    # REMOVE ROR
