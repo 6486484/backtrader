@@ -30,7 +30,7 @@ class TradeRecorder(Analyzer):
                 self.exit_price = price
 
         This code only works for simple trades with one exit and one entry.
-        Assume 1 unit traded, not tested with different trade sizes.]
+        Assume one unit traded, not tested with different trade sizes.]
 
 
         TRADE RECORDING MODE
