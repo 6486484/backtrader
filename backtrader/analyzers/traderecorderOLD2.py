@@ -143,7 +143,6 @@ class TradeRecorder(Analyzer):
 
 
     def stop(self):
-        print('yo 1')
         # Create our output list of closed and open trades we have tracked..
         for n in self._tradeDict:
 
@@ -186,9 +185,9 @@ class TradeRecorder(Analyzer):
             else:
                 # Trade closed.
                 # Calc & store equity if required..
-                #if self.p.mode in ['equity','trades+equity']:
-                #    _equity = self.calc_equity(trade)
-                #    self.rets.equityCurve.append(_equity)
+                if self.p.mode in ['equity','trades+equity']:
+                    _equity = self.calc_equity(trade)
+                    self.rets.equityCurve.append(_equity)
 
                 # Calc & store trades if required..
                 if self.p.mode in ['trades','trades+equity']:
@@ -222,25 +221,11 @@ class TradeRecorder(Analyzer):
         else:
             o.closedTrades = o.openTrades = None    # Trades not required..
 
-        #if self.p.mode in ['equity', 'trades+equity']:
-        #    o.equityCurve = (pd.concat(o.equityCurve).reset_index(drop=True)
-        #                     if o.equityCurve!=[] else None)
-        #else:
-        #    o.equityCurve = None    # Equity not required by user..
-
-        # Calculate equity curve DataFrame from Trade DataFrame..
-        # NOTE: we need to sort dates and calc cumulative equity using
-        # the closing date (instead of opening date)..
         if self.p.mode in ['equity', 'trades+equity']:
-            _df = o.closedTrades[['exit_date','pnlcomm']].copy()
-            _df.sort_values(['exit_date'],ascending=True, inplace=True)
-            _df = _df.reset_index(drop=True)
-            _df['pnlcomm']=_df.pnlcomm.cumsum()  # Calc cumulative equity..
-            _df.columns=['date','equity']  # Rename the two columns..
-            o.equityCurve = _df
+            o.equityCurve = (pd.concat(o.equityCurve).reset_index(drop=True)
+                             if o.equityCurve!=[] else None)
         else:
             o.equityCurve = None    # Equity not required by user..
-
 
         # 'Kill' internal list of Trade objects by setting to 'None'.
         # Inefficient if kept. We don't want list of bloated Trade objects to be
