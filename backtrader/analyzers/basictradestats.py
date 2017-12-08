@@ -237,7 +237,11 @@ class BasicTradeStats(Analyzer):
                     oWL.trades.closed = np.size(pnlList)
                     oWL.trades.percent = len(pnlList)/len(self._all_pnl_list)*100
                     oWL.pnl.total = np.sum(pnlList)
-                    oWL.pnl.max = np.max(pnlList)
+
+                    # Note: Max win calculated with max() function,
+                    # but Max loss calculated using min() function..
+                    oWL.pnl.max = (np.max(pnlList) if each=='won' else np.min(pnlList))
+
                     oWL.pnl.average = np.mean(pnlList)
                     oWL.pnl.median = np.median(pnlList)
                     # Streak calculations..
@@ -502,20 +506,20 @@ class BasicTradeStats(Analyzer):
 
             {'rowType':'table-seperator'},
             {'rowType':'row-data', 'data':
-            ['PROFIT      total', dpsf(oAp.total),
-            'PROFIT     total', dpsf(oWp.total), dpsf(oLp.total)]},
+            ['PROFIT      total', dpsf(oAp.total, dp=4),
+            'PROFIT     total', dpsf(oWp.total, dp=4), dpsf(oLp.total, dp=4)]},
 
             {'rowType':'row-data', 'data':
-            ['average', dpsf(oAp.average), 'average',
-            dpsf(oWp.average), dpsf(oLp.average)]},
+            ['average', dpsf(oAp.average, dp=4), 'average',
+            dpsf(oWp.average, dp=4), dpsf(oLp.average, dp=4)]},
 
             {'rowType':'row-data', 'data':
             ['Profit Factor', dpsf(oAs.profitFactor, dp=2),
-            'median', dpsf(oWp.median), dpsf(oLp.median)]},
+            'median', dpsf(oWp.median, dp=4), dpsf(oLp.median, dp=4)]},
 
             {'rowType':'row-data', 'data':
             ['Reward : Risk', dpsf(oAs.rewardRiskRatio, dp=2),
-            'max', dpsf(oWp.max), dpsf(oLp.max)]},
+            'max', dpsf(oWp.max, dp=4), dpsf(oLp.max, dp=4)]},
 
             {'rowType':'table-seperator'},
             {'rowType':'row-data', 'data':
@@ -528,7 +532,7 @@ class BasicTradeStats(Analyzer):
 
             {'rowType':'row-data', 'data':
             ['OTHER            ', '',
-            'average', dpsf(oWk.average), dpsf(oLk.average)]},
+            'average', dpsf(oWk.average, dp=2), dpsf(oLk.average, dp=2)]},
 
             {'rowType':'row-data', 'data':
             ['Expectancy %', dpsf(oAs.expectancyPercentEstimated, dp=1),
@@ -660,7 +664,10 @@ class BasicTradeStats(Analyzer):
         # Keep alignment if positive or negative number
         # e.g. -1.23 -> '-1.23'
         # e.g. 1.45  -> ' 1.45'  extra space added so stays aligned..
-        if n >= 0:
-            return ' ' + str(n)
+        if dp != None:
+            _st = f'{dp}'
+            # Format decimal place e.g. '%.2f' for 2dp..
+            _st = ('%.'+ _st +'f') % n
+            return _st
         else:
             return str(n)
