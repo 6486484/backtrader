@@ -122,6 +122,22 @@ class BasicTradeStats(Analyzer):
             )
 
 
+    def nextstart(self):
+        # Called once by Backtrader first valid bar of data..
+        o = self.rets   # User returned object..
+        o.all.firstStrategyTradingDate = self.datas[0].datetime.datetime(0)
+        self.next()     # Run next() method..
+
+
+    def next(self):
+        # Called every bar of data strategy runs.
+        # Get last trading date strategy runs used to calc annual statistics.
+        # Last trading date so far, is simply the current date of this bar.
+        # As more bars pass by, this last date is updated to reflect latest
+        # last date..
+        self.rets.all.lastStrategyTradingDate = self.datas[0].datetime.datetime(0)
+
+
     def create_analysis(self):
         # Set up variables..
 
@@ -150,12 +166,18 @@ class BasicTradeStats(Analyzer):
 
         # Variables output to user..
         o = self.rets = AutoOrderedDict()   # Return user object..
+
         # Stats applied to all trades (winners and losers)..
+        o.all.firstStrategyTradingDate = None
+        o.all.lastStrategyTradingDate = None
+
         o.all.trades.total = 0
         o.all.trades.open = 0
         o.all.trades.closed = 0
+
         o.all.pnl.total = None
         o.all.pnl.average = None
+
         o.all.streak.zScore = None
         o.all.stats.profitFactor = None
         o.all.stats.winFactor = None
@@ -163,6 +185,10 @@ class BasicTradeStats(Analyzer):
         o.all.stats.rewardRiskRatio = None
         o.all.stats.expectancyPercentEstimated = None
         o.all.stats.kellyPercent = None
+        o.all.stats.perTradeOpportunityPercent = None
+        o.all.stats.annualOpportunityPercent = None
+        o.all.stats.annualOpportunityCompoundedPercent = None
+
 
         for each in ['won', 'lost']:
             oWL=self.rets[each]
@@ -271,6 +297,50 @@ class BasicTradeStats(Analyzer):
                     oA.stats.expectancyPercentEstimated = (oA.pnl.average
                                                / (-1 * oL.pnl.average) * 100)
 
+            if (oA.stats.kellyPercent is not None
+                and oA.stats.expectancyPercentEstimated is not None):
+                # This is my (Rich O'Regan) own idea for important system
+                # measures.. simple but I believe essence.
+                # You will know how works by looking at the simple calculation..
+
+                # 'perTradeOpportunityPercent'
+                #   a system may have 3 trades a year, will get a shitty AOP &
+                #   AOCP compared to a system with 200.. but don't ignore as
+                #   could still be great system and combined with other similar
+                #   systems to increase trades..
+                #
+                # 'annualOpportunityPercent'
+                #   Equalises for effect of time. Take into account number of
+                #   trading days system backtested over and calulate the
+                #   'opportunity' for whole year.
+
+                # 'annualOpportunityCompoundedPercent'
+                # Same as above, just assume after each trade we are able to
+                # compound profits.
+                # Note: in reality may not be possible to compound after each
+                # trade coz amount of contracts allowed with margin or risk..
+                # MORE IMPORTANTLY, may have several trades on at the same time,
+                # some may close at same time (e.g. a shared stop), and
+                # outcome wasn't known, so new trades made whilst old positions
+                # not yet closed, would not have had benefits of knowing we
+                # could compound the profits (or allow for losses)..
+                # WHAT DOES THE ABOVE SHIT MEAN?:
+                #  It's a useful measure, sometimes it is precise, though in some
+                # system cases, perhaps with muliple overlapping trades,
+                # it's more of an helpful estimation..
+
+                #print('1st trade date =', oA.firstStrategyTradingDate)
+                #print('last trade date =', oA.lastStrategyTradingDate)
+                oA.stats.perTradeOpportunityPercent = (
+                    (oA.stats.kellyPercent / 100) *
+                    (oA.stats.expectancyPercentEstimated / 100) * 100)
+
+                _days = (oA.lastStrategyTradingDate -
+                        oA.firstStrategyTradingDate).days
+                oA.stats.annualOpportunityPercent = (oA.trades.closed *
+                    oA.stats.perTradeOpportunityPercent * _days / 365)
+
+
     def preparation_pre_calculation(self, trade):
         # This code does the basic steps of sorting each trade into a winner or
         # loser list which is then used later by 'calculate_statistics()'.
@@ -280,7 +350,6 @@ class BasicTradeStats(Analyzer):
         # reason to optimise. Better to optimise 'calculate_statistics()' as
         # this may be running every trade in exponential O^n time.
         # [If you don't know what n time or O^n times means, don't stress :) ]
-
 
         if trade.justopened:
             # Trade just opened, update number of trades..
@@ -338,12 +407,25 @@ class BasicTradeStats(Analyzer):
 
             if self.p.calcStatsAfterEveryTrade:
                 self.calculate_statistics()
-        ### ROR - question about overide or filter (can we still access individual), also _name for Sharpe
+
 
     def stop(self):
-        super().stop    # Check if we need this..         ########
-        if not self.p.calcStatsAfterEveryTrade: self.calculate_statistics()
+        # Get last trading date strategy runs.. used to calc annual statistics..
+        #o = self.rets   # User returned object..
+        #o.all.lastStrategyTradingDate = self.datas[0].datetime.datetime(0)
 
+        # REMOVED: if not self.p.calcStatsAfterEveryTrade: self.calculate_statistics()
+        # Removed line above, if we are using dates strategy ran for, then
+        # notify_trade() different than next()
+        # I.e. most statistics identical, but to check how many trading days passed
+        # we may have a trade then many days till another.. because of this
+        # any statistics like 'annualOpportunityPercent' that rely on number of
+        # trading days have occured, may be out..
+        # By running calculate_statistics() at end regardless if we calculated
+        # per trade, may mean for most statistics, we ran one time extra
+        # unecessary, but for trading day calculations, we need to run for
+        # accuracy..
+        self.calculate_statistics()   # Run every time..
 
         # Delete all lists we created to perform calculations..
         # (to save memory)
@@ -542,8 +624,13 @@ class BasicTradeStats(Analyzer):
             ['Kelly %', dpsf(oAs.kellyPercent, dp=1),
             '', '', '']},
 
-            #{'rowType':'row-data', 'data':
-            #['Kelly %','%.1f'% oAs.kellyPercent,'','','']},
+            {'rowType':'row-data', 'data':
+            ['PTO', dpsf(oAs.perTradeOpportunityPercent, dp=2),
+            '', '', '']},
+
+            {'rowType':'row-data', 'data':
+            ['AOP', dpsf(oAs.annualOpportunityPercent, dp=2),
+            '', '', '']},
 
             {'rowType':'table-bottom'}
         ]
