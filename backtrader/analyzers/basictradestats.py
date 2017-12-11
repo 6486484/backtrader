@@ -179,12 +179,14 @@ class BasicTradeStats(Analyzer):
         o.all.pnl.average = None
 
         o.all.streak.zScore = None
+
         o.all.stats.profitFactor = None
         o.all.stats.winFactor = None
         o.all.stats.winRate = None
         o.all.stats.rewardRiskRatio = None
         o.all.stats.expectancyPercentEstimated = None
         o.all.stats.kellyPercent = None
+        o.all.stats.tradesPerYear = None
         o.all.stats.perTradeOpportunityPercent = None
         o.all.stats.annualOpportunityPercent = None
         o.all.stats.annualOpportunityCompoundedPercent = None
@@ -329,16 +331,24 @@ class BasicTradeStats(Analyzer):
                 # system cases, perhaps with muliple overlapping trades,
                 # it's more of an helpful estimation..
 
-                #print('1st trade date =', oA.firstStrategyTradingDate)
-                #print('last trade date =', oA.lastStrategyTradingDate)
+                # TO % - 'perTradeOpportunityPercent'
                 oA.stats.perTradeOpportunityPercent = (
                     (oA.stats.kellyPercent / 100) *
                     (oA.stats.expectancyPercentEstimated / 100) * 100)
 
-                _days = (oA.lastStrategyTradingDate -
+                # AO % - 'annualOpportunityPercent'
+                _daysStrategyRan = (oA.lastStrategyTradingDate -
                         oA.firstStrategyTradingDate).days
-                oA.stats.annualOpportunityPercent = (oA.trades.closed *
-                    oA.stats.perTradeOpportunityPercent * _days / 365)
+                oA.stats.tradesPerYear = oA.trades.closed * 365 / _daysStrategyRan
+                oA.stats.annualOpportunityPercent = (oA.stats.tradesPerYear *
+                        oA.stats.perTradeOpportunityPercent)
+
+                # AOC % - 'annualOpportunityCompoundedPercent'
+                _power = (oA.stats.tradesPerYear)
+                _value = ((oA.stats.perTradeOpportunityPercent / 100) + 1)
+                print('_value',_value)
+                oA.stats.annualOpportunityCompoundedPercent = (
+                        (np.power(_value, _power) - 1) * 100  )
 
 
     def preparation_pre_calculation(self, trade):
@@ -625,11 +635,19 @@ class BasicTradeStats(Analyzer):
             '', '', '']},
 
             {'rowType':'row-data', 'data':
-            ['PTO', dpsf(oAs.perTradeOpportunityPercent, dp=2),
+            ['TO %', dpsf(oAs.perTradeOpportunityPercent, dp=2),
             '', '', '']},
 
             {'rowType':'row-data', 'data':
-            ['AOP', dpsf(oAs.annualOpportunityPercent, dp=2),
+            ['AO %', dpsf(oAs.annualOpportunityPercent, dp=2),
+            '', '', '']},
+
+            {'rowType':'row-data', 'data':
+            ['AOC %', dpsf(oAs.annualOpportunityCompoundedPercent, dp=2),
+            '', '', '']},
+
+            {'rowType':'row-data', 'data':
+            ['Trades per year', dpsf(oAs.tradesPerYear, dp=2),
             '', '', '']},
 
             {'rowType':'table-bottom'}
