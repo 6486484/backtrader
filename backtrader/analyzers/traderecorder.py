@@ -143,7 +143,6 @@ class TradeRecorder(Analyzer):
 
 
     def stop(self):
-        print('yo 1')
         # Create our output list of closed and open trades we have tracked..
         for n in self._tradeDict:
 

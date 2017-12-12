@@ -190,6 +190,7 @@ class BasicTradeStats(Analyzer):
         o.all.stats.perTradeOpportunityPercent = None
         o.all.stats.annualOpportunityPercent = None
         o.all.stats.annualOpportunityCompoundedPercent = None
+        #o.all.stats.stake1PercentAnnualOpportunityCompoundedPercent = None
 
 
         for each in ['won', 'lost']:
@@ -346,9 +347,14 @@ class BasicTradeStats(Analyzer):
                 # AOC % - 'annualOpportunityCompoundedPercent'
                 _power = (oA.stats.tradesPerYear)
                 _value = ((oA.stats.perTradeOpportunityPercent / 100) + 1)
-                print('_value',_value)
                 oA.stats.annualOpportunityCompoundedPercent = (
                         (np.power(_value, _power) - 1) * 100  )
+
+                # 1% stake AOC % - 'stake1PercentAnnualOpportunityCompoundedPercent'
+                #_1pctTradeOp = 0.01 * (oA.stats.expectancyPercentEstimated / 100)
+                #_1pctValue = _1pctTradeOp + 1
+                #oA.stats.stake1PercentAnnualOpportunityCompoundedPercent = (
+                #        (np.power(_1pctValue, _power) - 1) * 100  )
 
 
     def preparation_pre_calculation(self, trade):
@@ -596,59 +602,61 @@ class BasicTradeStats(Analyzer):
             #'%.2f' % oWt.percent if oWt.percent!=None else oWt.percent,
             #('%s' if oLt.percent is None else '%.2f') % oLt.percent]},
 
+            {'rowType':'row-data', 'data':
+            ['Trades per year', dpsf(oAs.tradesPerYear, dp=1),
+            '', '', '']},
+
             {'rowType':'table-seperator'},
             {'rowType':'row-data', 'data':
-            ['PROFIT      total', dpsf(oAp.total, dp=4),
-            'PROFIT     total', dpsf(oWp.total, dp=4), dpsf(oLp.total, dp=4)]},
+            ['PROFIT      total', dpsf(oAp.total, dp=2),
+            'PROFIT     total', dpsf(oWp.total, dp=2), dpsf(oLp.total, dp=2)]},
 
             {'rowType':'row-data', 'data':
-            ['average', dpsf(oAp.average, dp=4), 'average',
-            dpsf(oWp.average, dp=4), dpsf(oLp.average, dp=4)]},
+            ['average', dpsf(oAp.average, dp=2), 'average',
+            dpsf(oWp.average, dp=2), dpsf(oLp.average, dp=2)]},
 
             {'rowType':'row-data', 'data':
             ['Profit Factor', dpsf(oAs.profitFactor, dp=2),
-            'median', dpsf(oWp.median, dp=4), dpsf(oLp.median, dp=4)]},
+            'median', dpsf(oWp.median, dp=2), dpsf(oLp.median, dp=2)]},
 
             {'rowType':'row-data', 'data':
             ['Reward : Risk', dpsf(oAs.rewardRiskRatio, dp=2),
-            'max', dpsf(oWp.max, dp=4), dpsf(oLp.max, dp=4)]},
+            'max', dpsf(oWp.max, dp=2), dpsf(oLp.max, dp=2)]},
 
             {'rowType':'table-seperator'},
             {'rowType':'row-data', 'data':
-            ['STREAK    Z-Score', dpsf(oAk.zScore, dp=2),
+            ['Kelly %', dpsf(oAs.kellyPercent, dp=1),
             'STREAK   current', dpsf(oWk.current), dpsf(oLk.current)]},
 
             {'rowType':'row-data', 'data':
-            ['', '',
+            ['Expectancy %', dpsf(oAs.expectancyPercentEstimated, dp=1),
             'max' , dpsf(oWk.max), dpsf(oLk.max)]},
 
             {'rowType':'row-data', 'data':
-            ['OTHER            ', '',
+            ['TO %', dpsf(oAs.perTradeOpportunityPercent, dp=2),
             'average', dpsf(oWk.average, dp=2), dpsf(oLk.average, dp=2)]},
 
             {'rowType':'row-data', 'data':
-            ['Expectancy %', dpsf(oAs.expectancyPercentEstimated, dp=1),
+            ['AO %', dpsf(oAs.annualOpportunityPercent, dp=1),
             'median', dpsf(oWk.median), dpsf(oLk.median)]},
 
-            {'rowType':'row-data', 'data':
-            ['Kelly %', dpsf(oAs.kellyPercent, dp=1),
-            '', '', '']},
+            #{'rowType':'row-data', 'data':
+            #['Kelly %', dpsf(oAs.kellyPercent, dp=1),
+            #'', '', '']},
+
+            #{'rowType':'row-data', 'data':
+            #['TO %', dpsf(oAs.perTradeOpportunityPercent, dp=2),
+            #'', '', '']},
 
             {'rowType':'row-data', 'data':
-            ['TO %', dpsf(oAs.perTradeOpportunityPercent, dp=2),
-            '', '', '']},
+            ['AOC %', dpsf(oAs.annualOpportunityCompoundedPercent, dp=1),
+            'Z-Score', dpsf(oAk.zScore, dp=1), dpsf(oAk.zScore, dp=1)]},
 
-            {'rowType':'row-data', 'data':
-            ['AO %', dpsf(oAs.annualOpportunityPercent, dp=2),
-            '', '', '']},
 
-            {'rowType':'row-data', 'data':
-            ['AOC %', dpsf(oAs.annualOpportunityCompoundedPercent, dp=2),
-            '', '', '']},
-
-            {'rowType':'row-data', 'data':
-            ['Trades per year', dpsf(oAs.tradesPerYear, dp=2),
-            '', '', '']},
+            #{'rowType':'row-data', 'data':
+            #['1% AOC %',
+            # dpsf(oAs.stake1PercentAnnualOpportunityCompoundedPercent, dp=2),
+            #'', '', '']},
 
             {'rowType':'table-bottom'}
         ]
